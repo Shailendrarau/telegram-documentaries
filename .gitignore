@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+.opencode/node_modules/
+
+# Secrets — never commit real values
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
