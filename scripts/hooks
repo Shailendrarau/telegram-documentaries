@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Ground-truth lint + type check runner: ruff (lint + format) and mypy.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+echo "==> ruff check"
+python -m ruff check .
+
+echo "==> ruff format --check"
+python -m ruff format --check .
+
+echo "==> mypy"
+python -m mypy src tests
+
+echo "==> all checks passed"
