@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Ground-truth test runner. Runs the full pytest suite.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+python -m pytest "$@"

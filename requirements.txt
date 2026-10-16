@@ -1,0 +1,31 @@
+# Fully-resolved dependency lockfile (direct + transitive), pinned for
+# reproducible installs. Regenerate with a clean-venv install of the direct
+# pins and `pip freeze`.
+#
+# Direct runtime dependencies
+httpx==0.28.1
+pydantic==2.11.10
+pydantic-settings==2.11.0
+python-dotenv==1.1.1
+
+# Direct dev dependencies
+pytest==8.4.2
+ruff==0.13.3
+mypy==1.18.2
+
+# Transitive dependencies (full closure)
+annotated-types==0.8.0
+anyio==4.15.1
+certifi==2026.7.22
+h11==0.16.0
+httpcore==1.0.9
+idna==3.20
+iniconfig==2.3.1
+mypy-extensions==1.1.0
+packaging==26.3
+pathspec==1.1.1
+pluggy==1.7.0
+pydantic-core==2.33.2
+pygments==2.21.0
+typing-extensions==4.16.0
+typing-inspection==0.4.4
