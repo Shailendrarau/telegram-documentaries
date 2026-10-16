@@ -4,17 +4,27 @@ One phase per pipeline capability, in dependency order. A phase is marked
 **complete only when verified** — code running is not verification; a red test
 turned green is.
 
-## 1. Repository & gateway
+## 1. Repository & gateway — COMPLETE (verified 2026-10-16)
 
 Scaffold the project, wire `.env`, and get a long-polling loop answering.
 
-- **Acceptance criteria**
-  - `scripts/test` and `scripts/hooks` exist and run clean.
-  - `.env` is git-ignored; `.env.example` lists `TELEGRAM_BOT_TOKEN` and
+- **Delivery:** branch `feature/2026-10-16-repo-gateway` — base commit
+  `0c70b86` plus code-review fixes in the working tree. Verified with
+  `scripts/test` (53 tests green) and `scripts/hooks` (ruff check + format,
+  mypy strict — all clean). Secrets hygiene confirmed: `.env` git-ignored and
+  never committed, `.env.example` placeholder-only, `requirements.txt` fully
+  pinned (direct + transitive).
+- **Acceptance criteria (all verified)**
+  - [x] `scripts/test` and `scripts/hooks` exist and run clean.
+  - [x] `.env` is git-ignored; `.env.example` lists `TELEGRAM_BOT_TOKEN` and
     `GEMINI_API_KEY` with placeholders.
-  - The bot long-polls and replies to a message with a hardcoded response.
-  - Boundary parsing of a Telegram update into a typed model.
-- **Rubric criterion:** project runs end-to-end; secrets never committed.
+  - [x] The bot long-polls and replies to a message with a hardcoded response
+    (`hey mate!`) — proven by unit tests; the live phone smoke test is
+    **pending user confirmation** (needs a real bot token).
+  - [x] Boundary parsing of a Telegram update into a typed Pydantic model.
+- **Rubric criterion:** secrets never committed ✅; end-to-end live reply
+  ⏳ pending the user's manual smoke test.
+- **Spec:** `SPECS/2026-10-16-repo-gateway/`.
 
 ## 2. Bouncer — vision gate
 

@@ -21,6 +21,8 @@ def setup_logging() -> logging.Logger:
         logger.addHandler(handler)
     logger.setLevel(logging.INFO)
     logger.propagate = False
+    # Silence httpx's INFO logs to prevent leaking bot token in request URLs.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     return logger
 
 
@@ -29,17 +31,18 @@ def log_operation(func: F) -> F:
 
     @functools.wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
-        logger = logging.getLogger("telegram_documentaries")
-        start = time.time()
-        logger.debug(f"Starting {func.__name__}")
+        # Use the calling module's logger rather than the package-root logger.
+        logger = logging.getLogger(func.__module__)
+        start = time.perf_counter()
+        logger.debug("Starting %s", func.__name__)
         try:
             result = func(*args, **kwargs)
-            duration = time.time() - start
-            logger.debug(f"Completed {func.__name__} in {duration:.4f}s")
+            duration = time.perf_counter() - start
+            logger.debug("Completed %s in %.4fs", func.__name__, duration)
             return result
         except Exception:
-            duration = time.time() - start
-            logger.exception(f"Failed {func.__name__} after {duration:.4f}s")
+            duration = time.perf_counter() - start
+            logger.exception("Failed %s after %.4fs", func.__name__, duration)
             raise
 
     return wrapper  # type: ignore[return-value]

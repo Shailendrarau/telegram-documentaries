@@ -12,11 +12,12 @@ rather than crashing. Shutdown is graceful on ``SIGINT`` / ``KeyboardInterrupt``
 from __future__ import annotations
 
 import logging
+import time
+from collections.abc import Callable
 from typing import Any, Protocol
 
 from pydantic import ValidationError
 
-from telegram_documentaries.logging import log_operation
 from telegram_documentaries.models.telegram import TelegramUpdate
 from telegram_documentaries.telegram_client import TelegramClient
 
@@ -49,12 +50,17 @@ def _extract_update_id(raw: object) -> int | None:
     return None
 
 
-@log_operation
 def process_update(update: TelegramUpdate, client: PollingClient) -> None:
-    """Reply to a single parsed update if it carries a message."""
+    """Reply to a single parsed update if it carries a message.
+
+    Not decorated with ``@log_operation``: failures here are already logged
+    once (with ``update_id`` context) by ``_process_raw``, the boundary that
+    owns the conversation path. Logging the exception twice would duplicate
+    the traceback.
+    """
     message = update.message
     if message is None:
-        logger.debug("Update %s has no message; nothing to reply to", update.update_id)
+        logger.info("Update %s has no message; skipping", update.update_id)
         return
     client.send_message(chat_id=message.chat.id, text=REPLY_TEXT)
     logger.info(
@@ -69,7 +75,18 @@ def _process_raw(raw: dict[str, Any], client: PollingClient) -> None:
     try:
         update = TelegramUpdate.model_validate(raw)
     except ValidationError:
-        logger.exception("Failed to parse Telegram update; skipping: %r", raw)
+        # Telegram payloads are untrusted and may be arbitrarily large; log a
+        # truncated preview with its size, never the full payload.
+        raw_repr = repr(raw)
+        truncated = raw_repr[:500]
+        ellipsis = "..." if len(raw_repr) > 500 else ""
+        logger.error(
+            "Failed to parse Telegram update (len=%s keys=%s); skipping: %s%s",
+            len(raw_repr),
+            list(raw),
+            truncated,
+            ellipsis,
+        )
         return
 
     try:
@@ -78,11 +95,30 @@ def _process_raw(raw: dict[str, Any], client: PollingClient) -> None:
         logger.exception("Failed to handle update_id=%s; continuing", update.update_id)
 
 
+def _handle_poll_failure(
+    exc: Exception,
+    poll_interval: float = 5.0,
+    sleep: Callable[[float], None] | None = None,
+) -> None:
+    """Log a polling failure loudly, then pause before the next poll.
+
+    The pause (default 5s, injectable for tests) prevents a tight CPU/log
+    spin when polling fails persistently (e.g. a 401 bad token or a 409
+    getUpdates conflict).
+    """
+    logger.exception(
+        "Failed to fetch updates (%s); retrying in %.1fs", exc, poll_interval
+    )
+    if poll_interval > 0:
+        (sleep if sleep is not None else time.sleep)(poll_interval)
+
+
 def run_gateway(
     token: str,
     poll_timeout: int = 30,
     *,
     client: PollingClient | None = None,
+    poll_interval: float = 5.0,
 ) -> None:
     """Run the long-polling gateway loop until interrupted.
 
@@ -93,7 +129,7 @@ def run_gateway(
     polling: PollingClient = (
         client
         if client is not None
-        else TelegramClient(token=token, timeout=float(poll_timeout))
+        else TelegramClient(token=token, timeout=float(poll_timeout) + 5.0)
     )
     offset: int | None = None
 
@@ -101,9 +137,13 @@ def run_gateway(
     try:
         while True:
             try:
-                raw_updates = polling.get_updates(offset=offset, timeout=poll_timeout)
-            except Exception:
-                logger.exception("Failed to fetch updates; retrying")
+                raw_updates = polling.get_updates(
+                    offset=offset,
+                    timeout=poll_timeout,
+                    allowed_updates=["message"],
+                )
+            except Exception as exc:
+                _handle_poll_failure(exc, poll_interval=poll_interval)
                 continue
 
             max_update_id: int | None = None

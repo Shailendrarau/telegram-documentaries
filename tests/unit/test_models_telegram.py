@@ -97,9 +97,30 @@ def test_update_without_message_is_parsed() -> None:
 
     assert update.update_id == 5
     assert update.message is None
-    assert update.edited_message is None
-    assert update.channel_post is None
-    assert update.edited_channel_post is None
+
+
+def test_unmodelled_message_variant_fields_are_ignored() -> None:
+    """Phase 1 only handles ``message`` updates.
+
+    ``edited_message`` / ``channel_post`` / ``edited_channel_post`` are neither
+    requested from Telegram (``allowed_updates=["message"]``) nor modelled, so
+    an update that carries them parses cleanly with ``message is None`` instead
+    of raising.
+    """
+    update = TelegramUpdate.model_validate(
+        {
+            "update_id": 6,
+            "edited_message": {
+                "message_id": 1,
+                "chat": {"id": 1},
+                "date": 0,
+                "text": "edited",
+            },
+        }
+    )
+
+    assert update.update_id == 6
+    assert update.message is None
 
 
 def test_update_missing_update_id_fails_validation() -> None:

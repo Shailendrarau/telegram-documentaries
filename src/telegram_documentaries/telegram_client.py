@@ -35,9 +35,6 @@ class TelegramClient:
         session: httpx.Client | None = None,
     ) -> None:
         self._token = token
-        # httpx logs full request URLs at INFO, and the bot token is embedded in
-        # the URL path. Silence its logger so the token is never written to logs.
-        logging.getLogger("httpx").setLevel(logging.WARNING)
         self._client = session if session is not None else httpx.Client(timeout=timeout)
 
     def _url(self, api_method: str) -> str:

@@ -127,6 +127,36 @@ def test_send_message_raises_api_error_on_http_error_status() -> None:
         client.send_message(chat_id=1, text="hi")
 
 
+def test_get_updates_raises_on_non_json_response() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, text="<html>not json</html>")
+
+    client = make_client(handler)
+
+    with pytest.raises(TelegramAPIError, match="non-JSON"):
+        client.get_updates()
+
+
+def test_get_updates_raises_when_result_is_not_a_list() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"ok": True, "result": {"update_id": 1}})
+
+    client = make_client(handler)
+
+    with pytest.raises(TelegramAPIError, match="result"):
+        client.get_updates()
+
+
+def test_send_message_raises_when_result_is_not_a_dict() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"ok": True, "result": [1, 2, 3]})
+
+    client = make_client(handler)
+
+    with pytest.raises(TelegramAPIError, match="result"):
+        client.send_message(chat_id=1, text="hi")
+
+
 def test_api_error_message_does_not_contain_token() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(500, json={"ok": False, "description": "Server error"})

@@ -63,6 +63,3 @@ class TelegramUpdate(_BoundaryModel):
 
     update_id: int
     message: TelegramMessage | None = None
-    edited_message: TelegramMessage | None = None
-    channel_post: TelegramMessage | None = None
-    edited_channel_post: TelegramMessage | None = None

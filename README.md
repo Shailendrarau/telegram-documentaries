@@ -16,31 +16,81 @@ yourself — a hybrid animal portrait plus a dramatic British voice-over.
 Transport is Telegram **long polling** (no webhooks, no public URL). Session
 state is held in memory keyed by `chat_id`.
 
+## Status
+
+The project is built one phase at a time (`SPECS/ROADMAP.md`). **Phase 1 —
+Repository & gateway** is implemented: the bot **long-polls Telegram and replies
+exactly `hey mate!` to every incoming message**, regardless of content type. No
+agent, LLM, or session logic exists yet.
+
 ## Environment
 
-Create a `.env` in the project root with:
+The gateway reads secrets from the process environment, falling back to a
+`.env` file in the repository root. Required variables:
+
+| Variable | Purpose |
+|---|---|
+| `TELEGRAM_BOT_TOKEN` | Bot token from [@BotFather](https://t.me/BotFather); used for `getUpdates` / `sendMessage`. |
+| `GEMINI_API_KEY` | Gemini API key. Required by the configuration contract; unused by the Phase 1 gateway but needed by later phases. |
+
+Copy the template and fill in real values:
 
 ```
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
-GEMINI_API_KEY=your_gemini_api_key_here
+cp .env.example .env
 ```
 
 `.env` is git-ignored. Never commit real values — `.env.example` carries
 placeholders only.
 
+## Install
+
+Requires **Python 3.11+**. From the repository root:
+
+```
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+`requirements.txt` is a fully-resolved, pinned lockfile (direct and transitive
+dependencies) for reproducible installs.
+
 ## Running
 
-*(_To be documented once the gateway phase lands.)_
+Run from the **repository root** (the project-root `.env` is resolved relative
+to the package, but running from the root keeps paths and logs predictable):
+
+```
+python -m telegram_documentaries
+```
+
+The bot long-polls Telegram (`getUpdates`) and replies `hey mate!` to every
+incoming message update. `Ctrl+C` shuts it down gracefully.
 
 ## Development
 
 Ground-truth scripts for the toolchain:
 
-- `scripts/test` — run the test suite
-- `scripts/hooks` — lint and type checks
+- `scripts/test` — run the test suite (pytest)
+- `scripts/hooks` — lint and type checks (`ruff` + `mypy`)
 
 Both must pass before any phase is considered complete. Tests are written
 first (Red/Green TDD).
+
+## Manual smoke test
+
+Prereq: a valid `TELEGRAM_BOT_TOKEN` in `.env` (from the Phase 1 validation
+spec, `SPECS/2026-10-16-repo-gateway/validation.md`).
+
+1. Run the bot from the repository root: `python -m telegram_documentaries`.
+2. From a Telegram client (phone or desktop), send any message to the bot
+   (text or photo).
+3. Expected: the bot replies exactly `hey mate!` every time, regardless of
+   message content.
+4. Expected: the process keeps running after the reply; `Ctrl+C` shuts it down
+   gracefully.
+5. Expected: logs show the update was received/replied to, **without** printing
+   the token or key.
 
 ## Constitution
 
